@@ -4,8 +4,9 @@ from dataclasses import dataclass
 @dataclass
 class CanvasConfig:
     # Fixed Attributes
-    canvas_size: tuple[int, int] = (10000, 10000, 3)
-    margin: int = 100
+    canvas_mode: str = "auto" # "fixed" or "auto"
+    canvas_size: tuple[int, int, int] = (10000, 10000, 3)
+    margin: int = 500
     background_color: tuple[int, int, int] = (84, 1, 68)
     component_radius: int = 10
 
@@ -40,4 +41,16 @@ class CanvasConfig:
         offset_x = (available_w - scaled_width) / 2
         return int(offset_y), int(offset_x)
 
-
+    def compare(self, other: "CanvasConfig") -> int:
+        if self.canvas_size != other.canvas_size:
+            return 1 # Restart from update_component_thread
+        elif self.margin != other.margin:
+            return 1 # Restart from update_component_thread
+        elif self.canvas_mode != other.canvas_mode:
+            return 1 # Restart from update_component_thread
+        elif self.component_radius != other.component_radius:
+            return 2 # Restart from render_all_components
+        elif self.background_color != other.background_color:
+            return 3 # Change background image
+        else:
+            return 0

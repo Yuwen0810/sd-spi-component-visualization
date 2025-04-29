@@ -13,6 +13,9 @@ class SpiComponent:
     real_area: int
     pos_x: float
     pos_y: float
+    lineid: str
+    panel_id: str
+
     canvas_pos_x: int = -1
     canvas_pos_y: int = -1
 

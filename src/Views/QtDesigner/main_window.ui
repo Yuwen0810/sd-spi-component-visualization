@@ -11,7 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>SPI Visualization Tool</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="icons.qrc">
+    <normaloff>:/icons/feather-white/pcb-board.png</normaloff>:/icons/feather-white/pcb-board.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">* {
@@ -176,7 +180,7 @@ QScrollBar::handle:horizontal {
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QFrame" name="frame_3">
+        <widget class="QFrame" name="frameWorkspace">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -189,7 +193,7 @@ QScrollBar::handle:horizontal {
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <layout class="QGridLayout" name="gridLayout_3">
+         <layout class="QGridLayout" name="gridLayout_9">
           <property name="leftMargin">
            <number>5</number>
           </property>
@@ -202,10 +206,7 @@ QScrollBar::handle:horizontal {
           <property name="bottomMargin">
            <number>5</number>
           </property>
-          <property name="horizontalSpacing">
-           <number>10</number>
-          </property>
-          <property name="verticalSpacing">
+          <property name="spacing">
            <number>5</number>
           </property>
           <item row="0" column="0">
@@ -223,6 +224,12 @@ QScrollBar::handle:horizontal {
              <number>2</number>
             </property>
             <widget class="QFrame" name="frame_4">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>1</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
              </property>
@@ -245,18 +252,154 @@ QScrollBar::handle:horizontal {
               <property name="spacing">
                <number>5</number>
               </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label">
+              <item row="1" column="0">
+               <widget class="QFrame" name="frame_6">
                 <property name="styleSheet">
-                 <string notr="true">font-weight: bold;
+                 <string notr="true">.QPushButton:checked {
+    background-color: #dce6f2;
+}
+.QPushButton {
+    border: 1px solid #e8e8e8;
+    border-radius: 5px;
+	padding: 4px 6px;
+}
+
+.QPushButton:hover {
+    background-color: #f0f0f0;
+}
+
+</string>
+                </property>
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_10">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="spacing">
+                  <number>5</number>
+                 </property>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="labelTextLinId">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: bold;
 padding: 2px;</string>
-                </property>
-                <property name="text">
-                 <string>Component Selection Mode : </string>
-                </property>
+                   </property>
+                   <property name="text">
+                    <string>Line ID : </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QComboBox" name="comboBoxLineId">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="labelTextPanelId">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: bold;
+padding: 2px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Panel ID : </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QComboBox" name="comboBoxPanelId">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="labelIdno_2">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: bold;
+padding: 2px;</string>
+                   </property>
+                   <property name="text">
+                    <string>IDNO : </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLabel" name="labelIdno">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: bold;
+padding: 2px;</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="labelTextProduct">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: bold;
+padding: 2px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Product : </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="labelProduct">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: bold;
+padding: 2px;</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
-              <item row="1" column="0">
+              <item row="4" column="0">
                <widget class="QFrame" name="frame_5">
                 <property name="styleSheet">
                  <string notr="true">.QPushButton:checked {
@@ -296,37 +439,6 @@ padding: 2px;</string>
                  <property name="spacing">
                   <number>5</number>
                  </property>
-                 <item row="1" column="0">
-                  <widget class="QPushButton" name="pushButtonSelectType">
-                   <property name="minimumSize">
-                    <size>
-                     <width>40</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="focusPolicy">
-                    <enum>Qt::NoFocus</enum>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true"/>
-                   </property>
-                   <property name="text">
-                    <string>Type</string>
-                   </property>
-                   <property name="checkable">
-                    <bool>true</bool>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                   <property name="autoRepeat">
-                    <bool>false</bool>
-                   </property>
-                   <property name="autoExclusive">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="1" column="1">
                   <widget class="QPushButton" name="pushButtonSelectId">
                    <property name="minimumSize">
@@ -368,15 +480,57 @@ padding: 2px;</string>
                    </property>
                   </spacer>
                  </item>
+                 <item row="1" column="0">
+                  <widget class="QPushButton" name="pushButtonSelectSize">
+                   <property name="minimumSize">
+                    <size>
+                     <width>40</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="focusPolicy">
+                    <enum>Qt::NoFocus</enum>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true"/>
+                   </property>
+                   <property name="text">
+                    <string>Size</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <property name="autoRepeat">
+                    <bool>false</bool>
+                   </property>
+                   <property name="autoExclusive">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </widget>
               </item>
-              <item row="2" column="0">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label">
+                <property name="styleSheet">
+                 <string notr="true">font-weight: bold;
+padding: 2px;</string>
+                </property>
+                <property name="text">
+                 <string>Component Selection Mode : </string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
                <widget class="QStackedWidget" name="stackedWidgetSelectionMode">
                 <property name="currentIndex">
                  <number>0</number>
                 </property>
-                <widget class="QWidget" name="pageSelectType">
+                <widget class="QWidget" name="pageSelectSize">
                  <layout class="QGridLayout" name="gridLayout_6">
                   <property name="leftMargin">
                    <number>0</number>
@@ -394,14 +548,16 @@ padding: 2px;</string>
                    <number>5</number>
                   </property>
                   <item row="0" column="0">
-                   <widget class="CheckableTreeWidget" name="treeWidgetSelectType">
+                   <widget class="CheckableTreeWidget" name="treeWidgetSelectSize">
                     <property name="focusPolicy">
-                     <enum>Qt::NoFocus</enum>
+                     <enum>Qt::StrongFocus</enum>
                     </property>
                     <property name="styleSheet">
                      <string notr="true">QTreeWidget {
 	border: 1px solid #e8e8e8;
-}</string>
+}
+
+</string>
                     </property>
                     <column>
                      <property name="text">
@@ -432,7 +588,7 @@ padding: 2px;</string>
                   <item row="0" column="0">
                    <widget class="CheckableTreeWidget" name="treeWidgetSelectId">
                     <property name="focusPolicy">
-                     <enum>Qt::NoFocus</enum>
+                     <enum>Qt::StrongFocus</enum>
                     </property>
                     <property name="styleSheet">
                      <string notr="true">QTreeWidget {
@@ -450,11 +606,62 @@ padding: 2px;</string>
                 </widget>
                </widget>
               </item>
+              <item row="2" column="0">
+               <widget class="Line" name="line">
+                <property name="styleSheet">
+                 <string notr="true">border: none;
+border-bottom: 1px solid #e8e8e8;
+padding: 5px 0px;</string>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
-            <widget class="CustomGraphicsView" name="graphicsView">
-             <property name="styleSheet">
-              <string notr="true">QGraphicsView {
+            <widget class="QFrame" name="frame">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_3">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <property name="spacing">
+               <number>5</number>
+              </property>
+              <item row="1" column="0">
+               <widget class="CustomGraphicsView" name="graphicsView">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::NoFocus</enum>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">QGraphicsView {
 	background-color: transparent;
 	border: 1px solid #e8e8e8;
 }
@@ -487,7 +694,13 @@ QScrollBar::handle:horizontal {
 	border-radius:3px;
 	margin: 2px;
 }</string>
-             </property>
+                </property>
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
           </item>
@@ -500,6 +713,28 @@ QScrollBar::handle:horizontal {
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>895</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionSetCanvas"/>
+   </widget>
+   <addaction name="menuSettings"/>
+  </widget>
+  <action name="actionSetCanvas">
+   <property name="text">
+    <string>Canvas</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

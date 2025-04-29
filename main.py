@@ -3,6 +3,7 @@ import os
 import sys
 import cgitb
 import traceback
+from src.Utils import Log
 
 # Data Science and Third Party Imports
 
@@ -10,28 +11,46 @@ import traceback
 
 # PyQt Imports
 from PyQt6 import QtWidgets, QtGui, QtCore
-from PyQt6.QtCore import Qt, QSettings, QSize, QPoint, QSharedMemory
+from PyQt6.QtCore import Qt, QSettings, QSize, QPoint, QSharedMemory, QTimer
 from PyQt6.QtGui import QColor, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QMainWindow, QSplitter, QSplashScreen
 
+from src.Utils.QtUtils import SignalBlocker
 # User Imports
-from src.Models.Logger import Logger
-from src.Views.QtDesigner.MainWindow import Ui_MainWindow
-from src.Controllers.MainController import MainController
-from src.Configs.PathConfigs import QT_SETTINGS_PATH
-import src.Views.QtDesigner.IconsRc
+from src.Utils.SystemVariable import SystemVariable, ObservableProperty
+from src.Configs import QT_SETTINGS_PATH, UiConfigs
+from src.Views.SettingDialog import SettingDialog
 
+# Logger
+import logging
+
+from src.Views.SplashScreen import SplashScreen
+
+logger = logging.getLogger(__name__)
 cgitb.enable(format='text')
-# logger = Logger().get_logger()
-# logger.info("-" * 50)
+
+
+# TODO:
+#   1. 載入預設資料但路徑不存在時，不會 Crash。但之後切換檔案有 Bug，Loading 很久
 
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
+        from src.Views.QtDesigner.MainWindow import Ui_MainWindow
+        from src.Controllers.MainController import MainController
+        import src.Views.QtDesigner.IconsRc
+
         QMainWindow.__init__(self)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        # Sync system variables with settings to maintain state across sessions
+        self.system_variable: SystemVariable = SystemVariable()
+
+        # Initialize the Main Controller
+        self.setting_dialog: SettingDialog = SettingDialog()
+        self.main_controller = MainController(self.ui, self.setting_dialog)
 
         # Resize and Move Event Timer
         self.window_change_timer = QtCore.QTimer()
@@ -39,34 +58,46 @@ class MainWindow(QMainWindow):
         self.window_change_timer.setSingleShot(True)
         self.window_change_timer.timeout.connect(self.save_window_state)
 
-        # Initialize the Main Controller
-        self.main_controller = MainController(self.ui)
-
         # Initialize the QSettings
         self.q_settings = QSettings(QT_SETTINGS_PATH, QSettings.Format.IniFormat)
         self.sync_widgets = (
             # (Widget, Default Value)
             (self.ui.lineEditFilePath, ""),
-            (self.ui.pushButtonSelectType, True),
+            (self.ui.pushButtonSelectSize, True),
             (self.ui.pushButtonSelectId, False),
+
+            (self.setting_dialog.ui.groupBoxAutoCrop, UiConfigs.DEFAULT_GROUP_BOX_AUTO_CROP),
+            (self.setting_dialog.ui.groupBoxFixedSize, UiConfigs.DEFAULT_GROUP_BOX_FIXED_SIZE),
+            (self.setting_dialog.ui.spinBoxSizeX, UiConfigs.DEFAULT_SPIN_BOX_SIZE_X),
+            (self.setting_dialog.ui.spinBoxSizeY, UiConfigs.DEFAULT_SPIN_BOX_SIZE_Y),
+            (self.setting_dialog.ui.spinBoxMaxSideLength, UiConfigs.DEFAULT_SPIN_BOX_MAX_SIDE_LENGTH),
+            (self.setting_dialog.ui.spinBoxMargin, UiConfigs.DEFAULT_SPIN_BOX_MARGIN),
+            (self.setting_dialog.ui.spinBoxComponentRadius, UiConfigs.DEFAULT_SPIN_BOX_COMPONENT_RADIUS),
+            (self.system_variable.CANVAS_COLOR, UiConfigs.DEFAULT_CANVAS_COLOR),
         )
 
         # Set the default input and output path
         for widget, default_val in self.sync_widgets:
-            if isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(self.q_settings.value(widget.objectName(), default_val))
-            elif isinstance(widget, QtWidgets.QComboBox):
-                widget.setCurrentIndex(int(self.q_settings.value(widget.objectName(), default_val)))
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(int(self.q_settings.value(widget.objectName(), default_val)))
-            elif isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(float(self.q_settings.value(widget.objectName(), default_val)))
-            elif isinstance(widget, QtWidgets.QCheckBox):
-                widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
-            elif isinstance(widget, QtWidgets.QRadioButton):
-                widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
-            elif isinstance(widget, QtWidgets.QPushButton) and widget.isCheckable():
-                widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
+            with SignalBlocker(widget):
+                if isinstance(widget, QtWidgets.QLineEdit):
+                    widget.setText(self.q_settings.value(widget.objectName(), default_val))
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    widget.setCurrentIndex(int(self.q_settings.value(widget.objectName(), default_val)))
+                elif isinstance(widget, QtWidgets.QSpinBox):
+                    widget.setValue(int(self.q_settings.value(widget.objectName(), default_val)))
+                elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+                    widget.setValue(float(self.q_settings.value(widget.objectName(), default_val)))
+                elif isinstance(widget, QtWidgets.QCheckBox):
+                    widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
+                elif isinstance(widget, QtWidgets.QRadioButton):
+                    widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
+                elif isinstance(widget, QtWidgets.QPushButton) and widget.isCheckable():
+                    widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
+                elif isinstance(widget, QtWidgets.QGroupBox) and widget.isCheckable():
+                    widget.setChecked(self.q_settings.value(widget.objectName(), default_val, type=bool))
+                elif isinstance(widget, ObservableProperty):
+                    widget.set_value(self.q_settings.value(widget.objectName(), default_val))
+                    widget.set_default_value(default_val)
 
         def get_sync_callback(q_widget):
             return lambda text: self.q_settings.setValue(q_widget.objectName(), text)
@@ -87,6 +118,10 @@ class MainWindow(QMainWindow):
                 widget.toggled.connect(get_sync_callback(widget))
             elif isinstance(widget, QtWidgets.QPushButton) and widget.isCheckable():
                 widget.toggled.connect(get_sync_callback(widget))
+            elif isinstance(widget, QtWidgets.QGroupBox) and widget.isCheckable():
+                widget.toggled.connect(get_sync_callback(widget))
+            elif isinstance(widget, ObservableProperty):
+                widget.connect(get_sync_callback(widget))
 
         def get_splitter_move_callback(obj: QSplitter):
             return lambda: self.save_spitter_state(f"{obj.objectName()}_size", obj)
@@ -100,14 +135,27 @@ class MainWindow(QMainWindow):
         self.prev_window_position = self.q_settings.value("window_position", QPoint(100, 100))
         self.restore_window_state()
 
+        # Connect signals
+        self.setting_dialog.connect_signals()
+        self.main_controller.connect_signals()
+
+        # Run the UI setup after the main window is shown
+        QTimer.singleShot(0, self.run_after_ui_ready)
+
     def save_spitter_state(self, key: str, splitter: QSplitter):
         self.q_settings.setValue(key, splitter.sizes())
 
     def restore_window_state(self):
+        # Restore the window size, position, and splitter settings from saved state
+        screen = QtWidgets.QApplication.primaryScreen()
+        available_geometry = screen.availableGeometry()
+
+        if not available_geometry.contains(self.prev_window_position):
+            self.prev_window_position = available_geometry.center() - self.rect().center()
+
         self.resize(self.prev_window_size)
         self.move(self.prev_window_position)
 
-        # Restore splitter ratios
         for splitter in self.ui.centralwidget.findChildren(QSplitter):
             if sizes := self.q_settings.value(f"{splitter.objectName()}_size"):
                 splitter.setSizes([int(size) for size in sizes])
@@ -136,83 +184,12 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event):
         ...
 
-
-class SplashScreen:
-    def __init__(self, title="Application Launching", message="Please wait while the system starts...", min_width=300, min_height=80):
-        # Fonts for title and message
-        title_font = QtGui.QFont("Arial", 11, QtGui.QFont.Weight.Bold)
-        message_font = QtGui.QFont("Arial", 10)
-
-        # Create a temporary painter to calculate text bounding rectangles
-        temp_pixmap = QPixmap(1, 1)
-        temp_painter = QPainter(temp_pixmap)
-
-        # Calculate title bounding rectangle
-        temp_painter.setFont(title_font)
-        title_rect = temp_painter.boundingRect(0, 0, min_width, 0, Qt.AlignmentFlag.AlignHCenter, title)
-
-        # Calculate message bounding rectangle
-        temp_painter.setFont(message_font)
-        message_rect = temp_painter.boundingRect(0, 0, min_width, 0, Qt.AlignmentFlag.AlignHCenter, message)
-
-        temp_painter.end()
-
-        # Calculate total dimensions
-        padding = 20
-        text_width = max(title_rect.width(), message_rect.width())
-        text_height = title_rect.height() + message_rect.height() + padding  # Add padding between title and message
-
-        # Ensure minimum dimensions
-        splash_width = max(text_width + padding * 2, min_width)
-        splash_height = max(text_height + padding * 2, min_height)
-
-        # Create the splash screen pixmap
-        splash_pix = QPixmap(splash_width, splash_height)
-        splash_pix.fill(Qt.GlobalColor.white)
-
-        # Draw the border and text
-        painter = QPainter(splash_pix)
-        pen = QPen(QColor("#d8d8d8"))  # Black border
-        pen.setWidth(1)
-        painter.setPen(pen)
-        painter.drawRect(splash_pix.rect().adjusted(0, 0, -1, -1))
-
-        # Calculate vertical positions for title and message
-        center_y = splash_height // 2
-        title_y = center_y - (title_rect.height() // 2) - padding  # Adjust title slightly above center
-        message_y = center_y + (message_rect.height() // 2)  # Adjust message slightly below center
-
-        # Draw the title
-        painter.setFont(title_font)
-        painter.setPen(QColor("#000000"))  # Black color for title
-        painter.drawText(
-            splash_pix.rect().adjusted(0, title_y, 0, 0),
-            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-            title
+    def run_after_ui_ready(self):
+        self.setting_dialog.ui.pushButtonBackgroundColor.setStyleSheet(
+            f"background-color: {self.system_variable.CANVAS_COLOR.get_value()};"
         )
-
-        # Draw the message
-        painter.setFont(message_font)
-        painter.setPen(QColor("#555555"))  # Dark gray color for message
-        painter.drawText(
-            splash_pix.rect().adjusted(0, message_y, 0, 0),
-            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-            message
-        )
-
-        painter.end()
-
-        # Initialize the QSplashScreen
-        self.splash = QSplashScreen(splash_pix)
-
-    def show(self):
-        """Show the splash screen."""
-        self.splash.show()
-
-    def finish(self, window):
-        """Close the splash screen and transfer control to the main window."""
-        self.splash.finish(window)
-
+        self.system_variable.CANVAS_COLOR_DIALOG_TEMP.set_value(self.system_variable.CANVAS_COLOR.get_value())
+        self.main_controller.spi_visualization_controller.parse_spi_file(self.ui.lineEditFilePath.text())
 
 
 if __name__ == '__main__':
@@ -239,7 +216,6 @@ if __name__ == '__main__':
         else:
             window.show()
         splash.finish(window)
-
         sys.exit(app.exec())
 
     except Exception as e:

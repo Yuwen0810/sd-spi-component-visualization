@@ -23,16 +23,22 @@ from PyQt6.QtGui import QImage, QPixmap, QWheelEvent, QPainter, QPen, QMouseEven
 from src.Views.CustomWidgets.CustomGraphicsViewItems import CustomRectItem, CustomPathItem, CustomLineItem, \
     CustomEllipseItem, CustomTextItem
 
+# Logger
+import logging
+logger = logging.getLogger(__name__)
+
 # Type Hints
-DRAWING_TYPE_HINT = Literal["rect", "rect-fill", "line", "circle", "text", "rect-fill-hole", "triangle", "vline", "hline"]
+DRAWING_TYPE_HINT = Literal["rect", "rect-dash", "rect-fill", "line", "circle", "text", "rect-fill-hole", "triangle", "vline", "hline"]
 
 
-class CustomGraphicsView(QGraphicsView):
+class CanvasDemoGraphicsView(QGraphicsView):
     ZOOM_UNIT = 0.005
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Image related attributes
         self.image: Optional[np.ndarray] = None
@@ -45,22 +51,10 @@ class CustomGraphicsView(QGraphicsView):
         self.image_item = QGraphicsPixmapItem()
         self.scene().addItem(self.image_item)
 
-        self._panning = False
-        self._pan_start = QPoint()
-
         # Initialize annotation layers
         self._layer_groups: Dict[str, QGraphicsItemGroup] = {}
         self._df_layer_info: pd.DataFrame = pd.DataFrame(columns=["layer_name", "component_type", "component_size", "component_id", "line_id", "panel_id"])
         self._pending_layer_info: list = []
-
-        # Initialize drawing variables
-        self.left_drawing = False
-        self.right_drawing = False
-        self.start_point = (0, 0)
-        self.end_point = (0, 0)
-
-        # Initialize floating controls
-        self._init_floating_controls()
 
     def _register_annotation_layer(
         self,
@@ -110,20 +104,9 @@ class CustomGraphicsView(QGraphicsView):
         self.image_item = QGraphicsPixmapItem()
         self.scene().addItem(self.image_item)
 
-    def layer_info_flush(self):
-        """Flush the pending layer info to the DataFrame."""
-        if not self._pending_layer_info:
-            return
-
-        # Create a DataFrame from the pending layer info
-        df = pd.DataFrame(self._pending_layer_info)
-        self._df_layer_info = pd.concat([self._df_layer_info, df], ignore_index=True)
-        self._pending_layer_info.clear()
-
     def add_items_to_layer(
         self,
         layer_name: str,
-        layer_info: dict,
         shapes: Dict[DRAWING_TYPE_HINT, list[Tuple[Any, str]]],  # 每筆 shape 對應一個 obj_id
         color: Union[str, QColor],
         opacity: float = 1.0,
@@ -135,12 +118,10 @@ class CustomGraphicsView(QGraphicsView):
         if not shapes:
             return
 
+        logger.warning(f"{color = }")
         # Preprocess color if needed; use layer base color if color is not provided.
         if isinstance(color, str) and color.startswith("#"):
             color = QColor(color)
-
-        # Add layer info to the DataFrame
-        self._pending_layer_info.append(layer_info)
 
         # 自動註冊 layer
         layer_group = self._layer_groups.get(layer_name)
@@ -166,6 +147,17 @@ class CustomGraphicsView(QGraphicsView):
             w, h = abs(x2 - x1), abs(y2 - y1)
             item = CustomRectItem(x, y, w, h, base_color=color, obj_id=obj_id)
             item.setPen(QPen(color, width))
+            item.setOpacity(opacity)
+            layer_group.addToGroup(item)
+
+        # 畫圖形
+        for (x1, y1, x2, y2), obj_id in shapes.get("rect-dash", []):
+            x, y = min(x1, x2), min(y1, y2)
+            w, h = abs(x2 - x1), abs(y2 - y1)
+            item = CustomRectItem(x, y, w, h, base_color=color, obj_id=obj_id)
+            pen = QPen(color, width)
+            pen.setStyle(Qt.PenStyle.DashLine)  # 設定為虛線
+            item.setPen(pen)
             item.setOpacity(opacity)
             layer_group.addToGroup(item)
 
@@ -323,53 +315,14 @@ class CustomGraphicsView(QGraphicsView):
         """Handle show event: fit image to view and adjust floating controls."""
         super().showEvent(event)
         self.fit_to_view()
-        self.adjust_floating_widget()
 
     def resizeEvent(self, event):
-        """Handle resize event: adjust floating controls and refit image if in fit mode."""
+        """強制保持正方形，並自動縮放影像"""
+        size = min(self.width(), self.height())
+        self.setFixedSize(size, size)  # 強制變成正方形
+
         super().resizeEvent(event)
-        self.adjust_floating_widget()
-        if self.pushButtonFitSize.isChecked():
-            self.fit_to_view()
-
-    def _init_floating_controls(self):
-        """Initialize floating control widgets."""
-        self.floating_widget = QWidget(self)
-        self.floating_widget.setObjectName("floating_widget")
-        self.floating_widget.setStyleSheet("""
-            #floating_widget {background-color: transparent; border: none;} 
-            .QPushButton {border: 1px solid rgb(220, 220, 220); background-color: rgba(240, 240, 240, 1); padding: 4px;} 
-            .QPushButton::hover {background-color: rgba(231, 233, 255, 1);} 
-            .QPushButton::checked {background-color: rgba(220, 230, 242, 1);}
-        """)
-        layout = QHBoxLayout(self.floating_widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
-        layout.setAlignment(Qt.AlignmentFlag.AlignRight)
-
-        self.pushButtonFitSize = QPushButton()
-        self.pushButtonFitSize.setCheckable(True)
-        self.pushButtonFitSize.setChecked(True)
-        self.pushButtonFitSize.setIcon(QIcon(":/icons/feather-white/maximize.svg"))
-        self.pushButtonZoomIn = QPushButton()
-        self.pushButtonZoomIn.setIcon(QIcon(":/icons/feather-white/zoom-in.svg"))
-        self.pushButtonZoomOut = QPushButton()
-        self.pushButtonZoomOut.setIcon(QIcon(":/icons/feather-white/zoom-out.svg"))
-
-        for btn in [self.pushButtonFitSize, self.pushButtonZoomIn, self.pushButtonZoomOut]:
-            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            btn.setFixedSize(30, 30)
-            layout.addWidget(btn)
-
-        self.pushButtonFitSize.clicked.connect(self.fit_to_view)
-        self.pushButtonZoomIn.clicked.connect(self.zoom_in)
-        self.pushButtonZoomOut.clicked.connect(self.zoom_out)
-        self.adjust_floating_widget()
-
-    def adjust_floating_widget(self):
-        """Adjust the position of the floating widget."""
-        if hasattr(self, 'floating_widget'):
-            self.floating_widget.move(10, 10)
+        self.fit_to_view()
 
     def fit_to_view(self):
         """Fit the image to the view."""
@@ -385,10 +338,8 @@ class CustomGraphicsView(QGraphicsView):
         self, image: Optional[np.ndarray],
     ):
         """Display the image and update ROI annotations."""
-        if image is None:
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
+        if image is None:
             # If the image is None, clear the image
             self.image = None
             self.pixmap = None
@@ -397,9 +348,6 @@ class CustomGraphicsView(QGraphicsView):
             self.setSceneRect(0, 0, 0, 0)
 
         else:
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
             # Update the image and pixmap
             self.image = image.copy()
             self.pixmap = self.__numpy_to_pixmap(image)
@@ -410,8 +358,7 @@ class CustomGraphicsView(QGraphicsView):
             self.setSceneRect(0, 0, self.w, self.h)
 
             # Fit the image to the view
-            if self.pushButtonFitSize.isChecked():
-                self.fit_to_view()
+            self.fit_to_view()
 
     @staticmethod
     def __numpy_to_pixmap(np_image: np.ndarray) -> QPixmap:
@@ -433,39 +380,6 @@ class CustomGraphicsView(QGraphicsView):
         if self.image is not None:
             QApplication.clipboard().setPixmap(self.image_item.pixmap())
 
-    def wheelEvent(self, event: QWheelEvent):
-        """Handle mouse wheel event for zooming."""
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            event.accept()
-            if event.angleDelta().y() > 0:
-                self.zoom_in()
-            else:
-                self.zoom_out()
-        else:
-            super().wheelEvent(event)
-
-    def zoom_in(self):
-        """Zoom in the view."""
-        self.pushButtonFitSize.setChecked(False)
-        unit = self.ZOOM_UNIT
-        cur = self.scale_value
-        if abs(cur / unit - round(cur / unit)) < 1e-6:
-            new = cur + unit
-        else:
-            new = math.ceil(cur / unit) * unit
-        self.scale_value = new
-
-    def zoom_out(self):
-        """Zoom out the view."""
-        self.pushButtonFitSize.setChecked(False)
-        unit = self.ZOOM_UNIT
-        cur = self.scale_value
-        if abs(cur / unit - round(cur / unit)) < 1e-6:
-            new = cur - unit
-        else:
-            new = math.floor(cur / unit) * unit
-        self.scale_value = new
-
     def reset_size(self):
         """Reset the view to default scale."""
         self.scale_value = 1.0
@@ -480,112 +394,3 @@ class CustomGraphicsView(QGraphicsView):
             y = min(max(y, 0), self.h - 1)
         return x, y
 
-    def contextMenuEvent(self, event: QContextMenuEvent):
-        """Handle the right-click context menu."""
-        menu = QMenu(self)
-        menu.setStyleSheet("QMenu::item:!enabled {color: #999999;}")
-
-        act_copy_origin = menu.addAction("Copy Image")
-
-        # Disable actions if self.image is None
-        if self.image is None:
-            act_copy_origin.setDisabled(True)
-
-        # Use event.globalPos() in contextMenuEvent
-        selected_action = menu.exec(event.globalPos())
-        if selected_action:
-            self.copy_image_to_clipboard()
-
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._panning = True
-            self._pan_start = event.pos()
-            self.setCursor(Qt.CursorShape.ClosedHandCursor)
-            event.accept()
-        else:
-            super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QMouseEvent):
-        if self._panning:
-            delta = event.pos() - self._pan_start
-            self._pan_start = event.pos()
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
-            event.accept()
-        else:
-            super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton and self._panning:
-            self._panning = False
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            event.accept()
-        else:
-            super().mouseReleaseEvent(event)
-
-    def paintEvent(self, event):
-        """Handle paint event to draw scale information and overlay when disabled."""
-        super().paintEvent(event)
-        painter = QPainter(self.viewport())
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # 繪製縮放信息
-        text = f"Scale: {self.scale_value:.2f}x"
-        rect = painter.boundingRect(self.viewport().rect(), Qt.AlignmentFlag.AlignRight, text)
-        rect.moveBottomRight(self.viewport().rect().bottomRight() - QPoint(10, 10))
-        painter.fillRect(rect.adjusted(-2, -2, 2, 2), Qt.GlobalColor.white)
-        painter.drawText(rect, Qt.AlignmentFlag.AlignRight, text)
-
-        # 如果控件被禁用，繪製遮罩層
-        if not self.isEnabled():
-            # 創建半透明灰色遮罩
-            overlay_color = QColor(240, 240, 240, 150)  # 灰色，50% 透明度
-            painter.fillRect(self.viewport().rect(), overlay_color)
-
-            # 可選：在遮罩中央添加禁用標記或文字
-            painter.setPen(Qt.GlobalColor.black)
-            painter.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-            painter.drawText(self.viewport().rect(), Qt.AlignmentFlag.AlignCenter, "Loading ... ")
-
-    @staticmethod
-    def __clone_graphics_item_group(scene_group):
-        new_group = QGraphicsItemGroup()
-        for item in scene_group.childItems():
-            if isinstance(item, QGraphicsRectItem):
-                new_item = QGraphicsRectItem(item.rect())
-                new_item.setPos(item.pos())
-                new_item.setBrush(item.brush())
-                new_item.setPen(item.pen())
-            elif isinstance(item, QGraphicsTextItem):
-                new_item = QGraphicsTextItem(item.toPlainText())
-                new_item.setPos(item.pos())
-                new_item.setFont(item.font())
-                new_item.setDefaultTextColor(item.defaultTextColor())
-            else:
-                continue
-            new_group.addToGroup(new_item)
-        return new_group
-
-    def copy_image_to_clipboard(self) -> None:
-        if self.image is None:
-            return
-
-        # Get the bounding rectangle of the base image
-        rect = self.image_item.boundingRect()
-        if rect.isNull():
-            return
-
-        # Create a transparent QImage
-        img_w, img_h = int(rect.width()), int(rect.height())
-        image = QImage(img_w, img_h, QImage.Format.Format_ARGB32)
-        image.fill(Qt.GlobalColor.transparent)
-
-        # Use scene.render to draw all visible items (including the base image and all visible layers) into the image
-        painter = QPainter(image)
-        # Align the scene coordinates to the top-left corner of the image
-        painter.translate(-rect.topLeft())
-        # Target: the entire image, Source: the `rect` area in the scene
-        self.scene().render(painter, QRectF(0, 0, img_w, img_h), rect)
-        painter.end()
-
-        QApplication.clipboard().setImage(image)

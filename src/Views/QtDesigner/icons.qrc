@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file>feather-white/pcb-board.png</file>
     <file>feather-white/accept.png</file>
     <file>feather-white/activity.svg</file>
     <file>feather-white/airplay.svg</file>

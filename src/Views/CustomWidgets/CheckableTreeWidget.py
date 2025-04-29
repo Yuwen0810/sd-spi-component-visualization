@@ -1,8 +1,4 @@
 # Built-in Imports
-import os
-import sys
-import cgitb
-import traceback
 from collections import defaultdict
 
 # Data Science and Third Party Imports
@@ -11,9 +7,9 @@ from collections import defaultdict
 
 # PyQt Imports
 from PyQt6 import QtWidgets, QtGui, QtCore
-from PyQt6.QtCore import Qt, QSettings, QSize, QPoint, QSharedMemory, pyqtSignal, QTimer, QEvent
-from PyQt6.QtGui import QColor, QPainter, QPen, QPixmap, QKeySequence, QShortcut
-from PyQt6.QtWidgets import QMainWindow, QSplitter, QSplashScreen, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtGui import QColor, QPixmap, QKeySequence, QShortcut
+from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
 
 from src.Configs import COMPONENT_COLORS
 
@@ -46,6 +42,8 @@ class CheckableTreeWidget(QTreeWidget):
         self.setColumnWidth(2, 30)
 
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setAllColumnsShowFocus(True)
 
         # Toggle
         self._last_child_state: dict[str, Qt.CheckState] = {}

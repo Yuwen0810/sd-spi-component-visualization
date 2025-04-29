@@ -10,38 +10,52 @@ import numpy as np
 
 # PyQt Imports
 from PyQt6.QtCore import QTimer
-from PyQt6.QtGui import QMovie, QPixmap, QDragEnterEvent, QDragLeaveEvent
+from PyQt6.QtGui import QMovie, QPixmap, QDragEnterEvent, QDragLeaveEvent, QAction
 from PyQt6.QtWidgets import QGridLayout, QFrame, QPushButton, QLabel, QStackedWidget, QComboBox, QLineEdit, QTreeWidget, \
     QButtonGroup, QWidget, QFileDialog, QStatusBar
 
+from src.Utils.SystemVariable import SystemVariable
 from src.Views.CustomWidgets.CheckableTreeWidget import CheckableTreeWidget
 from src.Views.CustomWidgets.CustomGraphicsView import CustomGraphicsView
 # User Imports
 from src.Views.QtDesigner.MainWindow import Ui_MainWindow
+
+# Logger
+import logging
+logger = logging.getLogger(__name__)
 
 
 class SpiVisualizationSubView:
 
     def __init__(self, ui: Ui_MainWindow):
 
+        self.system_variable: SystemVariable = SystemVariable()
+
         self.statusBar: QStatusBar = ui.statusBar
+        self.actionSetCanvas: QAction = ui.actionSetCanvas
+
         self.frameWindow: QFrame = ui.frameWindow
+        self.frameWorkspace: QFrame = ui.frameWorkspace
 
         self.pushButtonLoadFile: QPushButton = ui.pushButtonLoadFile
         self.pushButtonOpenInExplorer: QPushButton = ui.pushButtonOpenInExplorer
 
+        self.labelProduct: QLabel = ui.labelProduct
+        self.labelIdno: QLabel = ui.labelIdno
+        self.comboBoxLineId: QComboBox = ui.comboBoxLineId
+        self.comboboxPanelId: QComboBox = ui.comboBoxPanelId
         self.pushButtonSelectId: QPushButton = ui.pushButtonSelectId
-        self.pushButtonSelectType: QPushButton = ui.pushButtonSelectType
+        self.pushButtonSelectSize: QPushButton = ui.pushButtonSelectSize
         self.selectionModeButtonGroup = QButtonGroup()
         self.selectionModeButtonGroup.addButton(self.pushButtonSelectId, 1)  # ID 1
-        self.selectionModeButtonGroup.addButton(self.pushButtonSelectType, 2)  # ID 2
+        self.selectionModeButtonGroup.addButton(self.pushButtonSelectSize, 2)  # ID 2
 
         self.stackedWidgetSelectionMode: QStackedWidget = ui.stackedWidgetSelectionMode
-        self.pageSelectType: QWidget = ui.pageSelectType
+        self.pageSelectSize: QWidget = ui.pageSelectSize
         self.pageSelectId: QWidget = ui.pageSelectId
 
         self.lineEditFilePath: QLineEdit = ui.lineEditFilePath
-        self.treeWidgetSelectType: CheckableTreeWidget = ui.treeWidgetSelectType
+        self.treeWidgetSelectSize: CheckableTreeWidget = ui.treeWidgetSelectSize
         self.treeWidgetSelectId: CheckableTreeWidget = ui.treeWidgetSelectId
 
         self.graphicsView: CustomGraphicsView = ui.graphicsView
@@ -59,8 +73,6 @@ class SpiVisualizationSubView:
         self.frameWindow.dragEnterEvent = self.file_drag_enter_event
         self.frameWindow.dropEvent = self.file_drop_event
         self.frameWindow.dragLeaveEvent = self.file_drag_leave_event
-
-
 
     def on_load_input_file_clicked(self):
         file_url, _ = QFileDialog.getOpenFileName(
